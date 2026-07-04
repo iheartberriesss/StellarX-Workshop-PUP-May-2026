@@ -1,21 +1,23 @@
 'use client';
-import { useState, useCallback } from 'react';
 
-const TIMEOUT_MS = 3000;
-
-// Freighter API calls can hang if the extension is missing — race them with a timeout.
-function withTimeout<T>(p: Promise<T>, fallback: T, ms = TIMEOUT_MS): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
-}
+import { useCallback, useState } from 'react';
+import {
+  getAddress,
+  isConnected,
+  setAllowed,
+  signMessage,
+} from '@stellar/freighter-api';
 
 export interface WalletState {
   publicKey: string | null;
   connecting: boolean;
   error: string | null;
-  connect: () => void;
+  connect: () => Promise<string | null>;
+  signChallenge: (message: string) => Promise<{
+    signedMessage: string | null;
+    signerAddress: string;
+  } | null>;
+  depositAndLock: () => Promise<boolean>;
   disconnect: () => void;
 }
 
@@ -27,32 +29,65 @@ export function useWallet(): WalletState {
   const connect = useCallback(async () => {
     setConnecting(true);
     setError(null);
+
     try {
-      // Dynamic import only — a static import breaks SSR (browser globals).
-      const freighter = await import('@stellar/freighter-api');
+      const connected = await isConnected();
 
-      const connected = await withTimeout(freighter.isConnected(), {
-        isConnected: false,
-      });
-      if (!connected.isConnected) {
-        throw new Error(
-          'Freighter not detected. Install it from freighter.app and reload.',
-        );
+      if (!connected) {
+        const allowed = await setAllowed();
+        if ((allowed as { error?: string; isAllowed?: boolean }).error || !(allowed as { isAllowed?: boolean }).isAllowed) {
+          throw new Error(
+            (allowed as { error?: string }).error ?? 'Freighter access was not approved.',
+          );
+        }
       }
 
-      // requestAccess() prompts the user and returns their address (Freighter v6).
-      const access = await freighter.requestAccess();
-      if (access.error) throw new Error(access.error);
-      if (!access.address) {
-        throw new Error('No address returned — did you approve the request?');
+      const addr = await getAddress();
+      if ((addr as { error?: string }).error) {
+        throw new Error((addr as { error?: string }).error ?? 'Freighter connect failed.');
       }
 
-      setPublicKey(access.address);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to connect wallet');
+      if (!(addr as { address?: string }).address) {
+        throw new Error('Freighter did not return an address.');
+      }
+
+      setPublicKey((addr as { address: string }).address);
+      return (addr as { address: string }).address;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Freighter connect failed.';
+      setError(message);
+      return null;
     } finally {
       setConnecting(false);
     }
+  }, []);
+
+  const signChallenge = useCallback(
+    async (message: string) => {
+      if (!publicKey) return null;
+
+      const result = await signMessage(message, {
+        address: publicKey,
+      });
+
+      if ((result as { error?: string }).error) {
+        throw new Error(
+          (result as { error?: string }).error ?? 'Message signing failed.',
+        );
+      }
+
+      return {
+        signedMessage: (result as { signedMessage?: string }).signedMessage ?? null,
+        signerAddress:
+          (result as { signerAddress?: string }).signerAddress ?? publicKey,
+      };
+    },
+    [publicKey],
+  );
+
+  const depositAndLock = useCallback(async () => {
+    setError('Deposit flow is not wired yet.');
+    return false;
   }, []);
 
   const disconnect = useCallback(() => {
@@ -60,5 +95,13 @@ export function useWallet(): WalletState {
     setError(null);
   }, []);
 
-  return { publicKey, connecting, error, connect, disconnect };
+  return {
+    publicKey,
+    connecting,
+    error,
+    connect,
+    signChallenge,
+    depositAndLock,
+    disconnect,
+  };
 }

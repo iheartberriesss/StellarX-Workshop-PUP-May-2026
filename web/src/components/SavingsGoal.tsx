@@ -32,7 +32,9 @@ export default function SavingsGoal({ publicKey }: { publicKey: string | null })
   }, [configured]);
 
   useEffect(() => {
-    refresh();
+    queueMicrotask(() => {
+      void refresh();
+    });
   }, [refresh]);
 
   const contribute = async () => {
@@ -89,7 +91,7 @@ export default function SavingsGoal({ publicKey }: { publicKey: string | null })
       : 0;
 
   return (
-    <div className="mt-6 rounded border border-gray-200 bg-white p-6">
+    <div className="mt-6">
       <h2 className="mb-4 text-lg font-semibold text-gray-900">
         Savings Goal (Soroban)
       </h2>

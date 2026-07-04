@@ -77,8 +77,8 @@ export default function SendPayment({
   };
 
   return (
-    <div className="mt-6 rounded border border-gray-200 bg-white p-6">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">Send Payment</h2>
+    <div className="mt-6 space-y-4">
+      <h2 className="text-lg font-semibold text-gray-900">Send Payment</h2>
 
       <div className="space-y-4">
         <div>
@@ -127,8 +127,8 @@ export default function SendPayment({
       </div>
 
       {status === 'success' && (
-        <div className="mt-4 rounded border border-emerald-200 bg-emerald-50 p-3">
-          <p className="font-medium text-emerald-700">Payment confirmed!</p>
+        <div className="mt-4 text-sm text-emerald-700">
+          <p className="font-medium">Payment confirmed!</p>
           <a
             href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
             target="_blank"
@@ -141,8 +141,8 @@ export default function SendPayment({
       )}
 
       {status === 'error' && (
-        <div className="mt-4 rounded border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-700">{errorMsg}</p>
+        <div className="mt-4 text-sm text-red-700">
+          <p>{errorMsg}</p>
         </div>
       )}
     </div>

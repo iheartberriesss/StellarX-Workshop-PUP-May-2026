@@ -14,7 +14,9 @@ export default function BalanceCard({
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    queueMicrotask(() => {
+      if (active) setLoading(true);
+    });
     fetchBalances(publicKey)
       .then((b) => active && setBalances(b))
       .catch(() => active && setBalances(null))
@@ -26,16 +28,16 @@ export default function BalanceCard({
 
   if (loading) {
     return (
-      <div className="mt-4 grid animate-pulse grid-cols-2 gap-4">
-        <div className="h-20 rounded bg-gray-200" />
-        <div className="h-20 rounded bg-gray-200" />
+      <div className="mt-4 space-y-3 animate-pulse">
+        <div className="h-4 rounded bg-gray-200" />
+        <div className="h-4 rounded bg-gray-200" />
       </div>
     );
   }
 
   if (balances && !balances.funded) {
     return (
-      <p className="mt-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+      <p className="mt-4 text-sm text-amber-800">
         This account isn’t funded yet. Click “Fund with Friendbot” above.
       </p>
     );
@@ -46,14 +48,14 @@ export default function BalanceCard({
   }
 
   return (
-    <div className="mt-4 grid grid-cols-2 gap-4">
-      <div className="rounded border border-gray-200 bg-white p-4">
+    <div className="mt-4 grid grid-cols-2 gap-6 text-gray-900">
+      <div>
         <p className="text-xs uppercase tracking-wide text-gray-500">XLM</p>
-        <p className="text-2xl font-bold text-gray-900">{balances.xlm}</p>
+        <p className="text-2xl font-bold">{balances.xlm}</p>
       </div>
-      <div className="rounded border border-gray-200 bg-white p-4">
+      <div>
         <p className="text-xs uppercase tracking-wide text-gray-500">USDC</p>
-        <p className="text-2xl font-bold text-gray-900">{balances.usdc}</p>
+        <p className="text-2xl font-bold">{balances.usdc}</p>
       </div>
     </div>
   );
